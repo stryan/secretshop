@@ -9,7 +9,7 @@ import (
 
 func main() {
 	viper.SetConfigName("config")
-	viper.AddConfigPath("/etc/gemineye/")
+	viper.AddConfigPath("/etc/secretshop/")
 	viper.AddConfigPath(".")
 	err := viper.ReadInConfig()
 	if err != nil { // Handle errors reading the config file
