@@ -173,24 +173,28 @@ func (s *Server) ParseRequest(req string) Response {
 		return Response{STATUS_TEMPORARY_FAILURE, "Unable to access file", ""}
 	case fi.IsDir():
 		if strings.HasSuffix(u.Path, "/") {
-			return generateDirectoryListing(selector)
+			return generateDirectory(selector)
 		} else {
 			return Response{STATUS_REDIRECT_PERMANENT, "gemini://" + s.Hostname + u.Path + "/", ""}
 		}
 	default:
 		// it's a file
-		meta := mime.TypeByExtension(filepath.Ext(selector))
-		file, err := os.Open(selector)
-		if err != nil {
-			panic("Failed to read file")
-		}
-		defer file.Close()
-		buf, err := ioutil.ReadAll(file)
-		return Response{STATUS_SUCCESS, meta, string(buf)}
+		return generateFile(selector)
 	}
 }
 
-func generateDirectoryListing(path string) Response {
+func generateFile(selector string) Response {
+	meta := mime.TypeByExtension(filepath.Ext(selector))
+	file, err := os.Open(selector)
+	if err != nil {
+		panic("Failed to read file")
+	}
+	defer file.Close()
+	buf, err := ioutil.ReadAll(file)
+	return Response{STATUS_SUCCESS, meta, string(buf)}
+}
+
+func generateDirectory(path string) Response {
 	var listing string
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -209,13 +213,7 @@ func generateDirectoryListing(path string) Response {
 		}
 		if file.Name() == "index.gmi" || file.Name() == "index.gemini" {
 			//Found an index file, return that instead
-			read_file, err := os.Open(path + file.Name())
-			if err != nil {
-				return Response{STATUS_TEMPORARY_FAILURE, "Unable to show directory index file", ""}
-			}
-			defer read_file.Close()
-			buf, err := ioutil.ReadAll(read_file)
-			return Response{STATUS_SUCCESS, "text/gemini", string(buf)}
+			return generateFile(path + file.Name())
 		} else {
 			listing += fmt.Sprintf("=> %s %s\r\n", file.Name(), file.Name())
 		}
