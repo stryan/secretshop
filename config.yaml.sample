@@ -1,0 +1,18 @@
+---
+active_capsules:
+        - localhost
+        - localhost2
+localhost:
+        Hostname: "localhost"
+        Port: "1965"
+        RootDir: "/var/gemini"
+        CGIDir: "/var/gemini/cgi"
+        KeyFile: "localhost.key"
+        CertFile: "localhost.crt"
+localhost2:
+        Hostname: "gemini.saintnet.tech"
+        Port: "1966"
+        RootDir: "/var/gemini2"
+        CGIDir: "/var/gemini2/cgi"
+        KeyFile: "localhost2.key"
+        CertFile: "localhost2.crt"
