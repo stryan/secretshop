@@ -1,5 +1,6 @@
 package main
 
+// Yoinked from jetforce and go'ified
 const (
 	STATUS_INPUT = 10
 
@@ -28,15 +29,6 @@ const (
 	STATUS_FUTURE_CERTIFICATE_REJECTED     = 64
 	STATUS_EXPIRED_CERTIFICATE_REJECTED    = 65
 )
-
-type Request struct {
-	Hostname string
-	Port     string
-	Path     string
-	Params   string
-	Query    string
-	Fragment string
-}
 
 type Response struct {
 	Status int
