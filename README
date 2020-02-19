@@ -2,7 +2,6 @@ SecretShop: a small Gemini server.
 
 # Features
 * Multi-site hosting
-* CGI (WIP)
 * Fully compliant with Jetforce diagnostics
 * Probably won't kill your computer
 
@@ -22,7 +21,7 @@ localhost:
         KeyFile: "localhost.key"
         CertFile: "localhost.crt"
 
-
+Please note that CGIDir currently not used (waiting on spec clarification).
 
 # Running
 Either run the executable directly or use the SystemD unit file

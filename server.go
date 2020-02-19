@@ -123,19 +123,19 @@ func (c *conn) serve(ctx context.Context) {
 		data[count] = b
 		count = count + 1
 	}
+	var res Response
+	var req string
 	if !strings.Contains(string(data), "\r\n") {
-		c.sendResponse(Response{STATUS_BAD_REQUEST, "Request too large", ""})
-		c.C.Close()
-		return
+		res = Response{STATUS_BAD_REQUEST, "Request too large", ""}
+		req = "TOO_LONG_REQUEST"
+	} else if !utf8.Valid(data) {
+		res = Response{STATUS_BAD_REQUEST, "URL contains non UTF8 charcaters", ""}
+	} else {
+		req = string(data[:count-2])
+		res = c.server.ParseRequest(req)
 	}
-	if !utf8.Valid(data) {
-		c.sendResponse(Response{STATUS_BAD_REQUEST, "URL contains non UTF8 charcaters", ""})
-		c.C.Close()
-		return
-	}
-	req := string(data[:count-2])
-	res := c.server.ParseRequest(req)
 	c.sendResponse(res)
+	log.Printf("%v: %v requested %v; responded with %v %v", c.server.Hostname, c.C.RemoteAddr(), req, res.Status, res.Meta)
 	c.C.Close()
 }
 
