@@ -1,7 +1,7 @@
 SecretShop: a small Gemini server.
 
 # Features
-* Multi-site hosting (WIP)
+* Multi-site hosting
 * CGI (WIP)
 * Fully compliant with Jetforce diagnostics
 * Probably won't kill your computer

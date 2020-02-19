@@ -201,6 +201,8 @@ func generateDirectory(path string) Response {
 		log.Println(err)
 		return Response{STATUS_TEMPORARY_FAILURE, "Unable to show directory listing", ""}
 	}
+	// Unashamedly based off solderpunks directory generation code
+	// https://tildegit.org/solderpunk/molly-brown/src/branch/master/handler.go
 	listing = "# Directory listing\r\n"
 	for _, file := range files {
 		// Skip dotfiles

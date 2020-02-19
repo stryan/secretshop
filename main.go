@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/spf13/viper"
 )
@@ -19,15 +20,29 @@ func main() {
 
 	//Load config
 	active_capsules := viper.GetStringSlice("active_capsules")
+
 	capsule_list := make([]Config, len(active_capsules))
 	for i, c := range active_capsules {
 		viper.UnmarshalKey(c, &(capsule_list[i]))
+		log.Printf("Loading capsule %v %v", i, capsule_list[i].Hostname)
 	}
 	if len(capsule_list) < 1 {
 		log.Println("No capsules defined. Shutting down.")
 		return
 	}
-	log.Fatal(ListenAndServeTLS(capsule_list[0]))
+	log.Printf("%v capsules loaded", len(capsule_list))
+	// Intialize servers
+	wg := new(sync.WaitGroup)
+	wg.Add(len(capsule_list))
+	for i, c := range capsule_list {
+		log.Printf("Starting capsule %v %v", i, c.Hostname)
+		go func(c interface{}) {
+			log.Fatal(ListenAndServeTLS(c.(Config)))
+			wg.Done()
+		}(c)
+	}
+	wg.Wait()
+	//log.Fatal(ListenAndServeTLS(capsule_list[0]))
 }
 
 type Config struct {
