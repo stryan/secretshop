@@ -54,7 +54,7 @@ func main() {
 			hole := h.(GopherConfig)
 			gopher.Handle("/", index(gopher.Dir(hole.RootDir)))
 			//log.Fatal(gopher.ListenAndServe(hole.Hostname+":"+hole.Port, nil))
-			server := &gopher.Server{Addr: ":" + hole.Port, Hostname: hole.Hostname, Handler: nil}
+			server := &gopher.Server{Addr: "0.0.0.0:" + hole.Port, Hostname: hole.Hostname, Handler: nil}
 			log.Fatal(server.ListenAndServe())
 			wg.Done()
 		}(h)
