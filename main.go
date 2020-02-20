@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"path"
 	"sync"
 
 	"github.com/prologic/go-gopher"
@@ -51,8 +52,10 @@ func main() {
 		log.Printf("Starting gopherhole %v %v", i, h.Hostname)
 		go func(h interface{}) {
 			hole := h.(GopherConfig)
-			gopher.Handle("/", gopher.FileServer(gopher.Dir(hole.RootDir)))
-			log.Fatal(gopher.ListenAndServe(hole.Hostname+":"+hole.Port, nil))
+			gopher.Handle("/", index(gopher.Dir(hole.RootDir)))
+			//log.Fatal(gopher.ListenAndServe(hole.Hostname+":"+hole.Port, nil))
+			server := &gopher.Server{Addr: ":" + hole.Port, Hostname: hole.Hostname, Handler: nil}
+			log.Fatal(server.ListenAndServe())
 			wg.Done()
 		}(h)
 	}
@@ -79,4 +82,25 @@ func (c *GeminiConfig) String() string {
 }
 func (c *GopherConfig) String() string {
 	return fmt.Sprintf("Gopher Config: %v:%v Files:%v", c.Hostname, c.Port, c.RootDir)
+}
+
+type indexHandler struct {
+	rootPath    string
+	rootHandler gopher.Handler
+}
+
+func (f *indexHandler) ServeGopher(w gopher.ResponseWriter, r *gopher.Request) {
+	upath := r.Selector
+	if gopher.GetItemType(f.rootPath+upath) == gopher.DIRECTORY && upath != "/" {
+		w.WriteItem(&gopher.Item{
+			Type:        gopher.DIRECTORY,
+			Selector:    path.Dir(upath),
+			Description: "Go Back",
+		})
+	}
+	f.rootHandler.ServeGopher(w, r)
+}
+
+func index(root gopher.FileSystem) *indexHandler {
+	return &indexHandler{root.Name(), gopher.FileServer(root)}
 }
