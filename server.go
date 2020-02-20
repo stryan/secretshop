@@ -81,7 +81,7 @@ func (s *Server) ListenAndServeTLS(certFile, keyFile string) error {
 
 	return s.Serve(ln)
 }
-func ListenAndServeTLS(cp Config) error {
+func ListenAndServeTLS(cp GeminiConfig) error {
 	server := &Server{Addr: ":" + cp.Port, ServerRoot: cp.RootDir, Hostname: cp.Hostname}
 	return server.ListenAndServeTLS(cp.CertFile, cp.KeyFile)
 }
