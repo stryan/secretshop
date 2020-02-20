@@ -37,7 +37,7 @@ func main() {
 		log.Println("No capsules or gopherholes loaded. Shutting down.")
 		return
 	}
-	log.Printf("%v capsules loaded, %v holes loaded", len(capsule_list), len(hole_list))
+	log.Printf("%v capsules loaded, %v gopherholes loaded", len(capsule_list), len(hole_list))
 	// Intialize servers
 	wg := new(sync.WaitGroup)
 	wg.Add(len(capsule_list) + len(hole_list))
@@ -59,6 +59,8 @@ func main() {
 			wg.Done()
 		}(h)
 	}
+	log.Println("Done bringing up capsules and gopherholes")
+	log.Println("Ho ho! You found me!")
 	wg.Wait()
 }
 

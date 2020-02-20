@@ -2,6 +2,8 @@
 active_capsules:
         - localhost
         - localhost2
+active_holes:
+        - localhost3
 localhost:
         Hostname: "localhost"
         Port: "1965"
@@ -10,9 +12,13 @@ localhost:
         KeyFile: "localhost.key"
         CertFile: "localhost.crt"
 localhost2:
-        Hostname: "gemini.saintnet.tech"
+        Hostname: "gemini.foo.bar"
         Port: "1966"
         RootDir: "/var/gemini2"
         CGIDir: "/var/gemini2/cgi"
         KeyFile: "localhost2.key"
         CertFile: "localhost2.crt"
+localhost3:
+	Hostname: "gopher.foo.bar"
+	Port: "70"
+	RootDir: "/var/gopher/"

@@ -2,6 +2,7 @@ SecretShop: a small Gemini server.
 
 # Features
 * Multi-site hosting
+* Also supports simple Gopher hosting
 * Fully compliant with Jetforce diagnostics
 * Probably won't kill your computer
 
