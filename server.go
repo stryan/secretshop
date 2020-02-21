@@ -32,7 +32,7 @@ var (
 	ServerContextKey = &contextKey{"gemini-server"}
 
 	// LocalAddrContextKey is a context key. It can be used in
-	// Gopher handlers with context.WithValue to access the address
+	// Gemini handlers with context.WithValue to access the address
 	// the local address the connection arrived on.
 	// The associated value will be of type net.Addr.
 	LocalAddrContextKey = &contextKey{"local-addr"}
@@ -169,7 +169,7 @@ func (s *Server) ParseRequest(req string) Response {
 		return Response{STATUS_NOT_FOUND, "Couldn't find file", ""}
 	case os.IsNotExist(err) || os.IsPermission(err):
 		return Response{STATUS_NOT_FOUND, "File does not exist", ""}
-	case uint64(fi.Mode().Perm())&0444 != 0444:
+	case isNotWorldReadable(fi):
 		return Response{STATUS_TEMPORARY_FAILURE, "Unable to access file", ""}
 	case fi.IsDir():
 		if strings.HasSuffix(u.Path, "/") {
@@ -185,6 +185,10 @@ func (s *Server) ParseRequest(req string) Response {
 
 func generateFile(selector string) Response {
 	meta := mime.TypeByExtension(filepath.Ext(selector))
+	if meta == "" {
+		//assume plain UTF-8 text
+		meta = "text/gemini; charset=utf-8"
+	}
 	file, err := os.Open(selector)
 	if err != nil {
 		panic("Failed to read file")
@@ -195,32 +199,26 @@ func generateFile(selector string) Response {
 }
 
 func generateDirectory(path string) Response {
-	var listing string
+	var dirpage string
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Println(err)
-		return Response{STATUS_TEMPORARY_FAILURE, "Unable to show directory listing", ""}
+		return Response{STATUS_TEMPORARY_FAILURE, "Unable to show directory dirpage", ""}
 	}
-	// Unashamedly based off solderpunks directory generation code
-	// https://tildegit.org/solderpunk/molly-brown/src/branch/master/handler.go
-	listing = "# Directory listing\r\n"
+	dirpage = "# Directory Contents\r\n"
 	for _, file := range files {
-		// Skip dotfiles
-		if strings.HasPrefix(file.Name(), ".") {
-			continue
-		}
-		// Only list world readable files
-		if uint64(file.Mode().Perm())&0444 != 0444 {
+		// Don't list hidden files
+		if isNotWorldReadable(file) || strings.HasPrefix(file.Name(), ".") {
 			continue
 		}
 		if file.Name() == "index.gmi" || file.Name() == "index.gemini" {
 			//Found an index file, return that instead
 			return generateFile(path + file.Name())
 		} else {
-			listing += fmt.Sprintf("=> %s %s\r\n", file.Name(), file.Name())
+			dirpage += fmt.Sprintf("=> %s %s\r\n", file.Name(), file.Name())
 		}
 	}
-	return Response{STATUS_SUCCESS, "text/gemini", listing}
+	return Response{STATUS_SUCCESS, "text/gemini", dirpage}
 }
 
 func (c *conn) sendResponse(r Response) error {
@@ -229,4 +227,8 @@ func (c *conn) sendResponse(r Response) error {
 		c.C.Write([]byte(r.Body))
 	}
 	return nil
+}
+
+func isNotWorldReadable(file os.FileInfo) bool {
+	return uint64(file.Mode().Perm())&0444 != 0444
 }
