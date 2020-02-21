@@ -24,5 +24,13 @@ localhost:
 
 Please note that CGIDir currently not used (waiting on spec clarification).
 
+# Installation
+Running "make install" will install to /usr/local/bin by default.
+
+Running "make service" will install to /usr/local/bin and also install the systemd service file
+
+# Uninstall
+Simply run "make uninstall"
+
 # Running
 Either run the executable directly or use the SystemD unit file
