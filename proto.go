@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // Yoinked from jetforce and go'ified
 const (
 	STATUS_INPUT = 10
@@ -34,4 +36,17 @@ type Response struct {
 	Status int
 	Meta   string
 	Body   string
+}
+
+type GeminiConfig struct {
+	Hostname string
+	Port     string
+	KeyFile  string
+	CertFile string
+	RootDir  string
+	CGIDir   string
+}
+
+func (c *GeminiConfig) String() string {
+	return fmt.Sprintf("Gemini Config: %v:%v Files:%v CGI:%v", c.Hostname, c.Port, c.RootDir, c.CGIDir)
 }
