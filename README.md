@@ -12,6 +12,7 @@ Configuration is in config/yaml in one of the above directories. See the sample 
 but a standard file looks like such:
 
 	---
+	port: 1965
 	active_capsules:
 	        - localhost
 	localhost:
@@ -21,6 +22,9 @@ but a standard file looks like such:
 	        CGIDir: "/var/gemini/cgi"
 	        KeyFile: "localhost.key"
 	        CertFile: "localhost.crt"
+
+Where each "active_capsule" is a virtual Gemini capsule. SecretShop supports virtual Gemini capsules all listening on port 1965
+as well as multiple Gopher servers runnning (though not virtual Gopher hosts due to protocol limitations)
 
 Please note that CGIDir currently not used (waiting on spec clarification).
 

@@ -41,8 +41,7 @@ var (
 type Server struct {
 	Addr string // TCP address to listen on, ":gemini" if empty
 
-	Hostname   string // FQDN Hostname to reach this server on
-	ServerRoot string //Root folder for gemini files
+	HostnameToRoot map[string]string //FQDN hostname to root folder
 }
 
 type conn struct {
@@ -59,19 +58,32 @@ func (s *Server) newConn(rwc net.Conn) *conn {
 	}
 	return c
 }
-func (s *Server) ListenAndServeTLS(certFile, keyFile string) error {
+
+func ListenAndServeTLS(port string, cps []GeminiConfig) error {
+	server := &Server{Addr: ":" + port, HostnameToRoot: make(map[string]string)}
+	for _, c := range cps {
+		server.HostnameToRoot[c.Hostname] = c.RootDir
+	}
+	return server.ListenAndServeTLS(cps)
+}
+
+func (s *Server) ListenAndServeTLS(configs []GeminiConfig) error {
 	addr := s.Addr
 	mime.AddExtensionType(".gmi", "text/gemini")
 	mime.AddExtensionType(".gemini", "text/gemini")
 	if addr == "" {
 		addr = ":1965"
 	}
-
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		log.Fatalf("server: loadkeys: %s", err)
+	certs := make([]tls.Certificate, len(configs))
+	for i, c := range configs {
+		cert, err := tls.LoadX509KeyPair(c.CertFile, c.KeyFile)
+		if err != nil {
+			log.Fatalf("Error loading certs: %s", err)
+		}
+		certs[i] = cert
 	}
-	config := tls.Config{Certificates: []tls.Certificate{cert}}
+
+	config := tls.Config{Certificates: certs}
 	config.Rand = rand.Reader
 
 	ln, err := tls.Listen("tcp", addr, &config)
@@ -80,10 +92,6 @@ func (s *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	}
 
 	return s.Serve(ln)
-}
-func ListenAndServeTLS(cp GeminiConfig) error {
-	server := &Server{Addr: ":" + cp.Port, ServerRoot: cp.RootDir, Hostname: cp.Hostname}
-	return server.ListenAndServeTLS(cp.CertFile, cp.KeyFile)
 }
 
 func (s *Server) Serve(l net.Listener) error {
@@ -135,7 +143,7 @@ func (c *conn) serve(ctx context.Context) {
 		res = c.server.ParseRequest(req)
 	}
 	c.sendResponse(res)
-	log.Printf("%v: %v requested %v; responded with %v %v", c.server.Hostname, c.C.RemoteAddr(), req, res.Status, res.Meta)
+	log.Printf("%v requested %v; responded with %v %v", c.C.RemoteAddr(), req, res.Status, res.Meta)
 	c.C.Close()
 }
 
@@ -154,14 +162,14 @@ func (s *Server) ParseRequest(req string) Response {
 	}
 	if u.Host == "" {
 		return Response{STATUS_BAD_REQUEST, "Need to specify a host", ""}
-	} else if u.Hostname() != s.Hostname {
+	} else if s.HostnameToRoot[u.Hostname()] == "" {
 		return Response{STATUS_PROXY_REQUEST_REFUSED, "Proxying by Hostname not currently supported", ""}
 	}
 	if strings.Contains(u.Path, "..") {
 		return Response{STATUS_PERMANENT_FAILURE, "Dots in path, assuming bad faith.", ""}
 	}
 
-	selector := s.ServerRoot + u.Path
+	selector := s.HostnameToRoot[u.Hostname()] + u.Path
 	fi, err := os.Stat(selector)
 	switch {
 	case err != nil:
@@ -175,7 +183,7 @@ func (s *Server) ParseRequest(req string) Response {
 		if strings.HasSuffix(u.Path, "/") {
 			return generateDirectory(selector)
 		} else {
-			return Response{STATUS_REDIRECT_PERMANENT, "gemini://" + s.Hostname + u.Path + "/", ""}
+			return Response{STATUS_REDIRECT_PERMANENT, "gemini://" + u.Hostname() + u.Path + "/", ""}
 		}
 	default:
 		// it's a file

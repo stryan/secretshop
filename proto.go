@@ -40,7 +40,6 @@ type Response struct {
 
 type GeminiConfig struct {
 	Hostname string
-	Port     string
 	KeyFile  string
 	CertFile string
 	RootDir  string
@@ -48,5 +47,5 @@ type GeminiConfig struct {
 }
 
 func (c *GeminiConfig) String() string {
-	return fmt.Sprintf("Gemini Config: %v:%v Files:%v CGI:%v", c.Hostname, c.Port, c.RootDir, c.CGIDir)
+	return fmt.Sprintf("Gemini Config: %v Files:%v CGI:%v", c.Hostname, c.RootDir, c.CGIDir)
 }

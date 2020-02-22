@@ -21,6 +21,7 @@ func main() {
 	//Load configs
 	active_capsules := viper.GetStringSlice("active_capsules")
 	active_holes := viper.GetStringSlice("active_holes")
+	port := viper.GetString("port")
 	capsule_list := make([]GeminiConfig, len(active_capsules))
 	hole_list := make([]GopherConfig, len(active_holes))
 	for i, c := range active_capsules {
@@ -38,14 +39,14 @@ func main() {
 	log.Printf("%v capsules loaded, %v gopherholes loaded", len(capsule_list), len(hole_list))
 	// Intialize servers
 	wg := new(sync.WaitGroup)
-	wg.Add(len(capsule_list) + len(hole_list))
-	for i, c := range capsule_list {
-		log.Printf("Starting capsule %v %v", i, c.Hostname)
-		go func(c interface{}) {
-			log.Fatal(ListenAndServeTLS(c.(GeminiConfig)))
-			wg.Done()
-		}(c)
-	}
+	wg.Add(1 + len(hole_list))
+
+	log.Printf("Starting gemini capsule")
+	go func(c interface{}) {
+		log.Fatal(ListenAndServeTLS(port, c.([]GeminiConfig)))
+		wg.Done()
+	}(capsule_list)
+
 	for i, h := range hole_list {
 		log.Printf("Starting gopherhole %v %v", i, h.Hostname)
 		go func(h interface{}) {
@@ -56,6 +57,7 @@ func main() {
 			wg.Done()
 		}(h)
 	}
+
 	log.Println("Done bringing up capsules and gopherholes")
 	log.Println("Ho ho! You found me!")
 	wg.Wait()
