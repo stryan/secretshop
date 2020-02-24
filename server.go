@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"mime"
 	"net"
@@ -40,8 +39,10 @@ var (
 
 type Server struct {
 	Addr string // TCP address to listen on, ":gemini" if empty
+	Port string // TCP port
 
 	HostnameToRoot map[string]string //FQDN hostname to root folder
+	HostnameToCGI  map[string]string //FQDN hostname to CGI folder
 }
 
 type conn struct {
@@ -60,9 +61,10 @@ func (s *Server) newConn(rwc net.Conn) *conn {
 }
 
 func ListenAndServeTLS(port string, cps []GeminiConfig) error {
-	server := &Server{Addr: ":" + port, HostnameToRoot: make(map[string]string)}
+	server := &Server{Addr: ":" + port, Port: port, HostnameToRoot: make(map[string]string), HostnameToCGI: make(map[string]string)}
 	for _, c := range cps {
 		server.HostnameToRoot[c.Hostname] = c.RootDir
+		server.HostnameToCGI[c.Hostname] = c.CGIDir
 	}
 	return server.ListenAndServeTLS(cps)
 }
@@ -140,14 +142,14 @@ func (c *conn) serve(ctx context.Context) {
 		res = Response{STATUS_BAD_REQUEST, "URL contains non UTF8 charcaters", ""}
 	} else {
 		req = string(data[:count-2])
-		res = c.server.ParseRequest(req)
+		res = c.server.ParseRequest(req, c)
 	}
 	c.sendResponse(res)
 	log.Printf("%v requested %v; responded with %v %v", c.C.RemoteAddr(), req, res.Status, res.Meta)
 	c.C.Close()
 }
 
-func (s *Server) ParseRequest(req string) Response {
+func (s *Server) ParseRequest(req string, c *conn) Response {
 	u, err := url.Parse(req)
 	if err != nil {
 		return Response{STATUS_BAD_REQUEST, "URL invalid", ""}
@@ -187,46 +189,19 @@ func (s *Server) ParseRequest(req string) Response {
 		}
 	default:
 		// it's a file
-		return generateFile(selector)
-	}
-}
-
-func generateFile(selector string) Response {
-	meta := mime.TypeByExtension(filepath.Ext(selector))
-	if meta == "" {
-		//assume plain UTF-8 text
-		meta = "text/gemini; charset=utf-8"
-	}
-	file, err := os.Open(selector)
-	if err != nil {
-		panic("Failed to read file")
-	}
-	defer file.Close()
-	buf, err := ioutil.ReadAll(file)
-	return Response{STATUS_SUCCESS, meta, string(buf)}
-}
-
-func generateDirectory(path string) Response {
-	var dirpage string
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		log.Println(err)
-		return Response{STATUS_TEMPORARY_FAILURE, "Unable to show directory dirpage", ""}
-	}
-	dirpage = "# Directory Contents\r\n"
-	for _, file := range files {
-		// Don't list hidden files
-		if isNotWorldReadable(file) || strings.HasPrefix(file.Name(), ".") {
-			continue
+		matches, err := filepath.Glob(s.HostnameToCGI[u.Hostname()] + "/*")
+		if err != nil {
+			log.Printf("%v: Couldn't search for CGI: %v", u.Hostname(), err)
+			return Response{STATUS_TEMPORARY_FAILURE, "Error finding file", ""}
 		}
-		if file.Name() == "index.gmi" || file.Name() == "index.gemini" {
-			//Found an index file, return that instead
-			return generateFile(path + file.Name())
+		if matches != nil && fi.Mode().Perm()&0111 == 0111 {
+			//CGI file found
+			return generateCGI(u, c)
 		} else {
-			dirpage += fmt.Sprintf("=> %s %s\r\n", file.Name(), file.Name())
+			//Normal file found
+			return generateFile(selector)
 		}
 	}
-	return Response{STATUS_SUCCESS, "text/gemini", dirpage}
 }
 
 func (c *conn) sendResponse(r Response) error {
